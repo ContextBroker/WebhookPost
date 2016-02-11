@@ -4,7 +4,8 @@
   "description": "A webhook for your application",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha",
+    "coveralls": "scripts/coveralls"
   },
   "repository": {
     "type": "git",
@@ -27,7 +28,15 @@
   "homepage": "https://github.com/piranna/WebhookPost#readme",
   "dependencies": {
     "concat-stream": "^1.5.1",
-    "eventsource": "^0.1.6",
+    "eventsource": "piranna/eventsource-node",
     "inherits": "^2.0.1"
+  },
+  "devDependencies": {
+    "coveralls": "^2.11.6",
+    "jscoverage": "piranna/jscoverage",
+    "mocha": "^2.4.5",
+    "mocha-lcov-reporter": "^1.0.0",
+    "nock": "^7.0.2",
+    "post2sse": "0.0.0"
   }
 }

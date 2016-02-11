@@ -75,6 +75,8 @@ function createServer(webhook)
 {
   var self = this
 
+  var onError = this.emit.bind(this, 'error')
+
   var port     = webhook.port     || 0
   var hostname = webhook.hostname || HOSTNAME
 
@@ -109,7 +111,8 @@ function createServer(webhook)
 
     self.emit('open', 'http://'+hostname+':'+address.port)
   })
-  .on('clientError', this.emit.bind(this, 'error'))
+  .on('error'      , onError)
+  .on('clientError', onError)
 
   return server
 }
@@ -154,7 +157,7 @@ function WebhookPost(webhook, options)
     })
   }
 
-  // Ad-hoc local webhook server
+  // Ad-hoc local web server
   else
   {
     if(webhook == null) webhook = {}
