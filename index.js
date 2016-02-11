@@ -1,5 +1,6 @@
 var http              = require('http')
 var networkInterfaces = require('os').networkInterfaces
+var parse             = require('url').parse
 var Readable          = require('stream').Readable
 
 var concat      = require('concat-stream')
@@ -79,6 +80,13 @@ function createServer(webhook)
 
   var server = http.createServer(function(req, res)
   {
+    if(req.method === 'GET')
+    {
+      res.end()
+
+      return self.push(parse(req.url).query)
+    }
+
     req.pipe(concat(function(body)
     {
       res.end()
@@ -146,7 +154,7 @@ function WebhookPost(webhook, options)
     })
   }
 
-  // Local POST server
+  // Ad-hoc local webhook server
   else
   {
     if(webhook == null) webhook = {}
