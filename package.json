@@ -1,0 +1,33 @@
+{
+  "name": "webhook-post",
+  "version": "0.0.0",
+  "description": "A webhook for your application",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/piranna/WebhookPost.git"
+  },
+  "keywords": [
+    "POST",
+    "SSE",
+    "EventSource",
+    "Webhook"
+  ],
+  "author": "Telefónica I+D",
+  "contributors": [
+    "Jesús Leganés Combarro 'piranna' <piranna@gmail.com>"
+  ],
+  "license": "AGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/piranna/WebhookPost/issues"
+  },
+  "homepage": "https://github.com/piranna/WebhookPost#readme",
+  "dependencies": {
+    "concat-stream": "^1.5.1",
+    "eventsource": "^0.1.6",
+    "inherits": "^2.0.1"
+  }
+}
