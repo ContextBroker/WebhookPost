@@ -1,4 +1,4 @@
-var createServer      = require('http').createServer
+var http              = require('http')
 var networkInterfaces = require('os').networkInterfaces
 var Readable          = require('stream').Readable
 
@@ -10,11 +10,23 @@ var inherits    = require('inherits')
 const HOSTNAME = '0.0.0.0'
 
 
+/**
+ * Filter the external IPv4 network interfaces
+ *
+ * @param {Object} interface
+ *
+ * @return {Boolean}
+ */
 function filterIPv4(interface)
 {
   return interface.family === 'IPv4' && !interface.internal
 }
 
+/**
+ * Get the adfress of an external IPv4 network interface in the current system
+ *
+ * @return {(string|undefined)}
+ */
 function getHostname()
 {
   var interfaces = networkInterfaces()
@@ -26,6 +38,87 @@ function getHostname()
 }
 
 
+/**
+ * Connect to a remove SSE server to receive the webhook notifications
+ *
+ * @param {string} webhook
+ * @param {Object} [options]
+ *
+ * @return {EventSource}
+ */
+function createEventSource(webhook, options)
+{
+  var self = this
+
+  var eventSource = new EventSource(webhook, options)
+
+  eventSource.addEventListener('open', this.emit.bind(this, 'open', webhook))
+  eventSource.addEventListener('message', function(message)
+  {
+    self.push(message.data)
+  })
+
+  return eventSource
+}
+
+/**
+ * Create an ad-hoc web server where to receive the webhook notifications
+ *
+ * @param {Object} webhook
+ * @param {string} [webhook.hostname=HOSTNAME]
+ * @param {Number} [webhook.port=0]
+ *
+ * @return {http.Server}
+ */
+function createServer(webhook)
+{
+  var self = this
+
+  var port     = webhook.port     || 0
+  var hostname = webhook.hostname || HOSTNAME
+
+  var server = http.createServer(function(req, res)
+  {
+    req.pipe(concat(function(body)
+    {
+      res.end()
+
+      self.push(body.toString())
+    }))
+  })
+  .listen(port, hostname, function()
+  {
+    var address = this.address()
+
+    if(hostname === HOSTNAME) hostname = getHostname()
+
+    if(!hostname)
+    {
+      self.emit('error', new Error("There's no public available interfaces"))
+
+      return this.close()
+    }
+
+    self.emit('open', 'http://'+hostname+':'+address.port)
+  })
+  .on('clientError', this.emit.bind(this, 'error'))
+
+  return server
+}
+
+
+/**
+ * Create a stream of webhook notifications
+ *
+ * @constructor
+ *
+ * @param {Object|string} [webhook]
+ * @param {string} [webhook.hostname=HOSTNAME]
+ * @param {Number} [webhook.port=0]
+ * @param {Object} [options]
+ *
+ * @return {EventSource|http.Server}
+ */
 function WebhookPost(webhook, options)
 {
   if(!(this instanceof WebhookPost)) return new WebhookPost(webhook, options)
@@ -41,9 +134,8 @@ function WebhookPost(webhook, options)
   // Remote ServerSendEvent server
   if(typeof webhook === 'string')
   {
-    var eventSource = new EventSource(webhook, options)
+    var eventSource = createEventSource.call(this, webhook, options)
 
-    eventSource.addEventListener('open', this.emit.bind(this, 'open', webhook))
     eventSource.addEventListener('error', function(error)
     {
       if(this.readyState !== EventSource.CLOSED)
@@ -51,10 +143,6 @@ function WebhookPost(webhook, options)
 
       self.push(null)
       eventSource = null
-    })
-    eventSource.addEventListener('message', function(message)
-    {
-      self.push(message.data)
     })
   }
 
@@ -64,34 +152,7 @@ function WebhookPost(webhook, options)
     if(webhook == null) webhook = {}
     else if(typeof webhook === 'number') webhook = {port: webhook}
 
-    var port     = webhook.port     || 0
-    var hostname = webhook.hostname || HOSTNAME
-
-    var server = createServer(function(req, res)
-    {
-      req.pipe(concat(function(body)
-      {
-        res.end()
-
-        self.push(body.toString())
-      }))
-    })
-    .listen(port, hostname, function()
-    {
-      var address = this.address()
-
-      if(hostname === HOSTNAME) hostname = getHostname()
-
-      if(!hostname)
-      {
-        self.emit('error', new Error("There's no public available interfaces"))
-
-        return this.close()
-      }
-
-      self.emit('open', 'http://'+hostname+':'+address.port)
-    })
-    .on('clientError', this.emit.bind(this, 'error'))
+    var server = createServer.call(this, webhook)
     .on('close', function()
     {
       self.push(null)
@@ -118,6 +179,11 @@ function WebhookPost(webhook, options)
 inherits(WebhookPost, Readable)
 
 
+/**
+ * Needed by {Readable} API, ignored
+ *
+ * @private
+ */
 WebhookPost.prototype._read = function(){}
 
 
