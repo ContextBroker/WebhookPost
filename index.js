@@ -14,27 +14,29 @@ const HOSTNAME = '0.0.0.0'
 /**
  * Filter the external IPv4 network interfaces
  *
- * @param {Object} interface
+ * @param {Object} info
+ * @param {string} [info.family]
+ * @param {Bollean} [info.internal]
  *
  * @return {Boolean}
  */
-function filterIPv4(interface)
+function filterIPv4(info)
 {
-  return interface.family === 'IPv4' && !interface.internal
+  return info.family === 'IPv4' && !info.internal
 }
 
 /**
  * Get the adfress of an external IPv4 network interface in the current system
  *
- * @return {(string|undefined)}
+ * @return {string|undefined}
  */
 function getHostname()
 {
   var interfaces = networkInterfaces()
   for(var name in interfaces)
   {
-    var interface = interfaces[name].filter(filterIPv4)[0]
-    if(interface) return interface.address
+    var info = interfaces[name].filter(filterIPv4)[0]
+    if(info) return info.address
   }
 }
 
@@ -44,6 +46,7 @@ function getHostname()
  *
  * @param {string} webhook
  * @param {Object} [options]
+ * @param {Boolean} [options.withCredentials=false]
  *
  * @return {EventSource}
  */
@@ -66,7 +69,7 @@ function createEventSource(webhook, options)
  * Create an ad-hoc web server where to receive the webhook notifications
  *
  * @param {Object} webhook
- * @param {string} [webhook.hostname=HOSTNAME]
+ * @param {string} [webhook.hostname='0.0.0.0']
  * @param {Number} [webhook.port=0]
  *
  * @return {http.Server}
@@ -123,12 +126,16 @@ function createServer(webhook)
  *
  * @constructor
  *
- * @param {Object|string} [webhook]
- * @param {string} [webhook.hostname=HOSTNAME]
+ * @param {Object|string|Number} [webhook={}]
+ * @param {string} [webhook.hostname='0.0.0.0']
  * @param {Number} [webhook.port=0]
  * @param {Object} [options]
+ * @param {Boolean} [options.withCredentials=false]
  *
- * @return {EventSource|http.Server}
+ * @emits WebhookPost#open
+ * @emits WebhookPost#data
+ * @emits WebhookPost#error
+ * @emits Readable#end
  */
 function WebhookPost(webhook, options)
 {
@@ -196,6 +203,30 @@ inherits(WebhookPost, Readable)
  * @private
  */
 WebhookPost.prototype._read = function(){}
+
+
+/**
+ * The webhook is ready and start to emit incoming notifications
+ *
+ * The connection to the remote SSE server has been stablished or the local
+ * ad-hoc web server has started
+ *
+ * @event WebhookPost#open
+ *
+ * @type {string} - URL where to receive the notifications POST requests
+ */
+
+/**
+ * @event WebhookPost#data
+ *
+ * @type {string}
+ */
+
+/**
+ * @event WebhookPost#error
+ *
+ * @type {Error}
+ */
 
 
 module.exports = WebhookPost
